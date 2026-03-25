@@ -71,3 +71,10 @@ __all__ = [
     'NodeType', 'CircuitPlan', 'TopologyAnalysis', 'QubitInfo',
     'CompileResult', 'ScanResult', 'classify_circuit',
 ]
+
+# Conditionally export transpiler passes when Qiskit is available
+try:
+    from .transpiler import RelayAnalysisPass, RelayEliminationPass
+    __all__ += ['RelayAnalysisPass', 'RelayEliminationPass']
+except ImportError:
+    pass

@@ -5,18 +5,46 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "nativ3"
 version = "0.1.0"
-description = "Topology-aware quantum circuit compiler with fault isolation analysis"
+description = "Topology-aware quantum circuit compiler with relay-bit fault isolation"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.9"
+authors = [
+    {name = "Derek Rosenzweig"},
+]
+keywords = [
+    "quantum", "compiler", "topology", "fault-isolation",
+    "relay-bit", "qiskit", "transpiler", "CNOT",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Physics",
+    "Operating System :: OS Independent",
+]
 dependencies = ["numpy>=1.21"]
 
 [project.optional-dependencies]
 qiskit = ["qiskit>=1.0"]
-dev = ["pytest>=7.0"]
+dev = ["pytest>=7.0", "qiskit>=1.0"]
 
 [project.scripts]
 nativ3 = "nativ3.cli:main"
 
 [project.urls]
 Paper = "https://doi.org/10.5281/zenodo.19210676"
+Homepage = "https://nativ3.shift8.space"
+Repository = "https://github.com/drosenzweig/nativ3"
+
+[project.entry-points."qiskit.transpiler.passes"]
+nativ3_relay_analysis = "nativ3.transpiler:RelayAnalysisPass"
+nativ3_relay_elimination = "nativ3.transpiler:RelayEliminationPass"
+
+[tool.setuptools.packages.find]
+include = ["nativ3*"]
