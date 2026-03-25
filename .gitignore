@@ -1,0 +1,16 @@
+node_modules/
+.next/
+.DS_Store
+*.pyc
+__pycache__/
+*.egg-info/
+dist/
+build/
+.venv/
+.eggs/
+.pytest_cache/
+.env.local
+Archive.zip
+files.zip
+*.tar.gz
+Archive/
