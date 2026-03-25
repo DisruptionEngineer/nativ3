@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nativ3"
+version = "0.1.0"
+description = "Topology-aware quantum circuit compiler with fault isolation analysis"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+dependencies = ["numpy>=1.21"]
+
+[project.optional-dependencies]
+qiskit = ["qiskit>=1.0"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+nativ3 = "nativ3.cli:main"
+
+[project.urls]
+Paper = "https://doi.org/10.5281/zenodo.19210676"

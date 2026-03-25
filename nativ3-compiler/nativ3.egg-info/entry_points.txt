@@ -1,0 +1,2 @@
+[console_scripts]
+nativ3 = nativ3.cli:main
