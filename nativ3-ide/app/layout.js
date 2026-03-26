@@ -1,3 +1,5 @@
+import { Analytics } from "@vercel/analytics/react";
+
 export const metadata = {
   title: "Nativ3 — Topology-Aware Quantum Circuit IDE",
   description: "Design quantum circuits by topology. Classify nodes. Detect relays. Guarantee fault isolation.",
@@ -19,7 +21,10 @@ export default function RootLayout({ children }) {
           ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

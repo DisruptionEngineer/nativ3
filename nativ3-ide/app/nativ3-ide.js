@@ -303,6 +303,190 @@ function Tab({ active, onClick, children }) {
   );
 }
 
+// ─── N-Relay Calculator ──────────────────────────────────────
+
+function innerRec(alphas, beta) {
+  if (alphas.length === 0) return 1;
+  const a = alphas[0], rest = alphas.slice(1);
+  const A = innerRec(rest, beta);
+  const B = bRec(rest, beta);
+  return Math.cos(a)**2 * A + Math.sin(a)**2 * B;
+}
+function bRec(alphas, beta) {
+  if (alphas.length === 0) return Math.sin(2*beta);
+  const a = alphas[0], rest = alphas.slice(1);
+  return Math.sin(2*a)/2 * (innerRec(rest, beta) + bRec(rest, beta));
+}
+
+function NRelayCalculator() {
+  const [N, setN] = useState(3);
+  const [beta, setBeta] = useState(0);
+  const [sigma, setSigma] = useState(0.1);
+  const [alphas, setAlphas] = useState([0.785, 0.785, 0.785]);
+
+  const updateN = useCallback((newN) => {
+    setN(newN);
+    setAlphas(prev => {
+      if (newN > prev.length) return [...prev, ...Array(newN - prev.length).fill(Math.PI/4)];
+      return prev.slice(0, newN);
+    });
+  }, []);
+
+  const updateAlpha = useCallback((idx, val) => {
+    setAlphas(prev => { const next = [...prev]; next[idx] = val; return next; });
+  }, []);
+
+  const sc = innerRec(alphas, beta);
+  const F = sc * sc;
+  const A = alphas.length > 0 ? innerRec(alphas.slice(1), beta) : 1;
+  const B = alphas.length > 0 ? bRec(alphas.slice(1), beta) : Math.sin(2*beta);
+  const popFrac = alphas.length > 0 ? Math.cos(alphas[0])**2 * A : 1;
+  const intFrac = alphas.length > 0 ? Math.sin(alphas[0])**2 * B : 0;
+
+  // Transfer matrix eigenvalues for first relay
+  const a0 = alphas.length > 0 ? alphas[0] : 0;
+  const tr = Math.cos(a0) * (Math.cos(a0) + Math.sin(a0));
+  const det = Math.sin(4 * a0) / 4;
+  const disc = tr*tr - 4*det;
+  const lp = disc >= 0 ? (tr + Math.sqrt(disc))/2 : tr/2;
+  const lm = disc >= 0 ? (tr - Math.sqrt(disc))/2 : tr/2;
+
+  // Disorder
+  const Nstar = sigma > 0.001 ? Math.round(1 / (2 * sigma * sigma)) : Infinity;
+  const Fdisorder = 0.25 * Math.exp(-2 * sigma * sigma * N);
+
+  // Curve: F vs N for uniform alpha
+  const curveW = 460, curveH = 180, pad = 40;
+  const uniformAlpha = alphas.length > 0 ? alphas[0] : Math.PI/4;
+  const curvePoints = [];
+  for (let nn = 0; nn <= 20; nn++) {
+    const f = innerRec(Array(nn).fill(uniformAlpha), beta) ** 2;
+    const x = pad + (nn / 20) * (curveW - 2*pad);
+    const y = pad + (1 - f) * (curveH - 2*pad);
+    curvePoints.push(`${x},${y}`);
+  }
+
+  const font = "'JetBrains Mono','Fira Code',monospace";
+  const s = (label, value, color) => (
+    <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0",fontSize:12,fontFamily:font}}>
+      <span style={{color:C.txm}}>{label}</span>
+      <span style={{color:color||C.accent,fontWeight:700}}>{typeof value==="number"?value.toFixed(6):value}</span>
+    </div>
+  );
+
+  return (
+    <div style={{padding:20,maxWidth:900,margin:"0 auto"}}>
+      <div style={{display:"flex",flexWrap:"wrap",gap:16}}>
+        {/* Left: controls */}
+        <div style={{flex:"1 1 320px",minWidth:280}}>
+          <div style={{background:C.sf,borderRadius:10,border:`1px solid ${C.bd}`,padding:16,marginBottom:12}}>
+            <div style={{fontSize:9,color:C.txm,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>Relay Chain</div>
+            <div style={{fontSize:10,color:C.txm,marginBottom:4}}>N relays</div>
+            <input type="range" min={1} max={8} value={N} onChange={e=>updateN(+e.target.value)} style={{width:"100%",accentColor:C.accent}}/>
+            <div style={{textAlign:"center",fontSize:20,fontWeight:700,color:C.accent}}>{N}</div>
+
+            {alphas.map((a, i) => (
+              <div key={i} style={{marginTop:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.txm}}>
+                  <span>α{i+1}</span><span style={{color:C.accent}}>{a.toFixed(3)}</span>
+                </div>
+                <input type="range" min={0} max={157} value={Math.round(a*100)} onChange={e=>updateAlpha(i,+e.target.value/100)} style={{width:"100%",accentColor:C.accent}}/>
+              </div>
+            ))}
+
+            <div style={{marginTop:12}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.txm}}>
+                <span>β (endpoint)</span><span style={{color:C.accent}}>{beta.toFixed(3)}</span>
+              </div>
+              <input type="range" min={0} max={157} value={Math.round(beta*100)} onChange={e=>setBeta(+e.target.value/100)} style={{width:"100%",accentColor:C.accent}}/>
+            </div>
+          </div>
+
+          {/* Disorder */}
+          <div style={{background:C.sf,borderRadius:10,border:`1px solid ${C.bd}`,padding:16}}>
+            <div style={{fontSize:9,color:C.txm,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>Theorem 12: Disorder</div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:C.txm}}>
+              <span>σ (disorder)</span><span style={{color:C.warn}}>{sigma.toFixed(3)}</span>
+            </div>
+            <input type="range" min={0} max={100} value={Math.round(sigma*200)} onChange={e=>setSigma(+e.target.value/200)} style={{width:"100%",accentColor:C.warn}}/>
+            {s("F(N) = ¼·exp(−2σ²N)", Fdisorder, Fdisorder>0.1?C.safe:C.danger)}
+            {s("N* (characteristic length)", Nstar===Infinity?"∞":Nstar, C.warn)}
+            <div style={{fontSize:10,color:C.txd,marginTop:8,lineHeight:1.5}}>
+              Balanced relays (π/4) are protected by a first-order perturbative gap: PM₁P = 0. Decay rate is σ², not σ.
+            </div>
+          </div>
+        </div>
+
+        {/* Right: results */}
+        <div style={{flex:"1 1 400px",minWidth:320}}>
+          <div style={{background:C.sf,borderRadius:10,border:`1px solid ${C.bd}`,padding:16,marginBottom:12}}>
+            <div style={{fontSize:9,color:C.txm,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>Theorem 7: N-Relay Recursion</div>
+            {s("⟨S|C⟩", sc)}
+            {s("F = ⟨S|C⟩²", F, F>0.9?C.safe:F>0.2?C.warn:C.danger)}
+            <div style={{borderTop:`1px solid ${C.bd}`,margin:"8px 0",paddingTop:8}}>
+              <div style={{fontSize:9,color:C.txm,marginBottom:4}}>DUAL CHANNELS</div>
+              {s("Population (cos²α·A)", popFrac, C.spoke)}
+              {s("Interference (sin²α·B)", intFrac, C.relay)}
+              {s("Pop / Total", sc!==0?(popFrac/sc*100).toFixed(1)+"%":"—", C.spoke)}
+              {s("Int / Total", sc!==0?(intFrac/sc*100).toFixed(1)+"%":"—", C.relay)}
+            </div>
+          </div>
+
+          {/* Transfer matrix */}
+          <div style={{background:C.sf,borderRadius:10,border:`1px solid ${C.bd}`,padding:16,marginBottom:12}}>
+            <div style={{fontSize:9,color:C.txm,textTransform:"uppercase",letterSpacing:1.5,marginBottom:10}}>Theorem 9: Transfer Matrix M(α₁)</div>
+            <div style={{fontFamily:font,fontSize:11,color:C.tx,lineHeight:1.8,padding:"4px 8px",background:"rgba(129,140,248,0.05)",borderRadius:6}}>
+              <div>┌ {(Math.cos(a0)**2).toFixed(4)}  {(Math.sin(a0)**2).toFixed(4)} ┐</div>
+              <div>└ {(Math.sin(2*a0)/2).toFixed(4)}  {(Math.sin(2*a0)/2).toFixed(4)} ┘</div>
+            </div>
+            <div style={{marginTop:8}}>
+              {s("tr(M)", tr)}
+              {s("det(M)", det)}
+              {s("λ₊", lp, lp>0.99?C.safe:C.warn)}
+              {s("λ₋", lm, C.txm)}
+              {a0 > 0.78 && a0 < 0.79 && <div style={{fontSize:10,color:C.safe,marginTop:4}}>✓ Projector: M²=M, eigenvalues {"{"} 1, 0 {"}"}</div>}
+            </div>
+          </div>
+
+          {/* F vs N curve */}
+          <div style={{background:C.sf,borderRadius:10,border:`1px solid ${C.bd}`,padding:16}}>
+            <div style={{fontSize:9,color:C.txm,textTransform:"uppercase",letterSpacing:1.5,marginBottom:8}}>F vs N (uniform α₁={uniformAlpha.toFixed(2)}, β={beta.toFixed(2)})</div>
+            <svg viewBox={`0 0 ${curveW} ${curveH}`} style={{width:"100%",height:"auto"}}>
+              {[0,.25,.5,.75,1].map(f=>{
+                const y=pad+(1-f)*(curveH-2*pad);
+                return <line key={f} x1={pad} x2={curveW-pad} y1={y} y2={y} stroke={C.bd} strokeWidth={0.5}/>;
+              })}
+              <polyline points={curvePoints.join(" ")} fill="none" stroke={C.accent} strokeWidth={2.5}/>
+              {/* Mark current N */}
+              {N<=20 && (() => {
+                const fN = innerRec(Array(N).fill(uniformAlpha), beta)**2;
+                const x = pad + (N/20)*(curveW-2*pad);
+                const y = pad + (1-fN)*(curveH-2*pad);
+                return <circle cx={x} cy={y} r={5} fill={C.accent} stroke={C.bg} strokeWidth={2}/>;
+              })()}
+              <text x={curveW/2} y={curveH-4} textAnchor="middle" fill={C.txd} fontSize="9" fontFamily={font}>N (relays)</text>
+              <text x={8} y={curveH/2} textAnchor="middle" fill={C.txd} fontSize="9" fontFamily={font} transform={`rotate(-90,8,${curveH/2})`}>F</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      {/* Formulas reference */}
+      <div style={{marginTop:16,padding:16,borderRadius:10,background:"linear-gradient(135deg,rgba(129,140,248,0.06),rgba(16,185,129,0.06))",border:`1px solid ${C.bd}`}}>
+        <div style={{fontSize:11,fontWeight:600,color:C.accent,marginBottom:8}}>TWELVE THEOREMS</div>
+        <div style={{fontSize:11,color:C.txm,lineHeight:2,fontFamily:font}}>
+          <div><span style={{color:C.tx}}>T2:</span> F = (cos²α + sin²α·sin2β·cosφ₃)²</div>
+          <div><span style={{color:C.tx}}>T7:</span> ⟨S|C⟩ = cos²α₁·⟨S|C⟩(rest) + sin²α₁·B(rest) — recursive</div>
+          <div><span style={{color:C.tx}}>T9:</span> ⟨S|C⟩ = e₁ᵀ · ∏M(αₖ) · v(β) — transfer matrix product</div>
+          <div><span style={{color:C.tx}}>T10:</span> M(π/4) = ½|1,1⟩⟨1,1| — projector, F=0.25 ∀N</div>
+          <div><span style={{color:C.tx}}>T11:</span> tr(M) = cosα(cosα+sinα), det(M) = sin(4α)/4</div>
+          <div><span style={{color:C.tx}}>T12:</span> F(N) = ¼·exp(−2σ²N), c=1 exactly, PM₁P=0</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main IDE ─────────────────────────────────────────────────
 
 export default function Nativ3IDE() {
@@ -361,6 +545,7 @@ export default function Nativ3IDE() {
       <div style={{borderBottom:`1px solid ${C.bd}`,padding:"8px 20px",display:"flex",gap:6}}>
         <Tab active={tab==="scanner"} onClick={()=>setTab("scanner")}>Circuit Scanner</Tab>
         <Tab active={tab==="benchmarks"} onClick={()=>setTab("benchmarks")}>Algorithm Benchmarks</Tab>
+        <Tab active={tab==="nrelay"} onClick={()=>setTab("nrelay")}>N-Relay Calculator</Tab>
       </div>
 
       {/* ─── Scanner Tab ─── */}
@@ -527,10 +712,13 @@ export default function Nativ3IDE() {
         </div>
       )}
 
+      {/* ─── N-Relay Calculator Tab ─── */}
+      {tab === "nrelay" && <NRelayCalculator />}
+
       {/* ─── Footer ─── */}
       <div style={{borderTop:`1px solid ${C.bd}`,padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
         <div style={{fontSize:9,color:C.txd}}>
-          Three Theorems: Non-transitivity · F=cos⁴(α) · Exact fault isolation under TPCP noise
+          Twelve Theorems · Non-transitivity · General fidelity · CZ duality · Fault isolation · Container survival · Builder memory · Double relay · N-relay recursion · Convergence · Transfer matrix · Projector · Disorder decay
         </div>
         <div style={{fontSize:9,color:C.txd}}>
           DOI: 10.5281/zenodo.19210676
