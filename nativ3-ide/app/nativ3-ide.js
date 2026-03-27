@@ -473,7 +473,7 @@ function NRelayCalculator() {
 
       {/* Formulas reference */}
       <div style={{marginTop:16,padding:16,borderRadius:10,background:"linear-gradient(135deg,rgba(129,140,248,0.06),rgba(16,185,129,0.06))",border:`1px solid ${C.bd}`}}>
-        <div style={{fontSize:11,fontWeight:600,color:C.accent,marginBottom:8}}>TWELVE THEOREMS</div>
+        <div style={{fontSize:11,fontWeight:600,color:C.accent,marginBottom:8}}>SIXTEEN THEOREMS</div>
         <div style={{fontSize:11,color:C.txm,lineHeight:2,fontFamily:font}}>
           <div><span style={{color:C.tx}}>T2:</span> F = (cos²α + sin²α·sin2β·cosφ₃)²</div>
           <div><span style={{color:C.tx}}>T7:</span> ⟨S|C⟩ = cos²α₁·⟨S|C⟩(rest) + sin²α₁·B(rest) — recursive</div>
@@ -481,6 +481,213 @@ function NRelayCalculator() {
           <div><span style={{color:C.tx}}>T10:</span> M(π/4) = ½|1,1⟩⟨1,1| — projector, F=0.25 ∀N</div>
           <div><span style={{color:C.tx}}>T11:</span> tr(M) = cosα(cosα+sinα), det(M) = sin(4α)/4</div>
           <div><span style={{color:C.tx}}>T12:</span> F(N) = ¼·exp(−2σ²N), c=1 exactly, PM₁P=0</div>
+          <div style={{borderTop:`1px solid ${C.bd}`,paddingTop:8,marginTop:4}}><span style={{color:"#f59e0b"}}>T13 (CZ):</span> ⟨S|C⟩ = ½·Σ(-1)^Δ·∏p(rₖ,αₖ) — Fourier polynomial in cos(2α)</div>
+          <div><span style={{color:"#f59e0b"}}>T15:</span> Z = ½(O₀+O₁), O₀ uses ξ=⟨ψ|U|ψ⟩, O₁ uses ξ*=⟨ψ|U†|ψ⟩</div>
+          <div style={{borderTop:`1px solid ${C.bd}`,paddingTop:8,marginTop:4}}><span style={{color:"#10b981"}}>T16:</span> Universal 4×4 block-diagonal transfer matrix for ALL C-U gates</div>
+          <div style={{color:C.txd,fontSize:10}}>D=4 universal. Hub=0→r₀ (forward). Hub=1→r₀* (backward). Bond dimension constant ∀N.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── General C-U Calculator (Theorem 16) ──────────────────────
+
+function GeneralCUCalculator() {
+  const font="'JetBrains Mono','Fira Code',monospace";
+  const [gateKey, setGateKey] = useState("H");
+  const [nRelays, setNRelays] = useState(3);
+  const [beta, setBeta] = useState(45);
+  const [uniform, setUniform] = useState(true);
+  const [uniformAlpha, setUniformAlpha] = useState(45);
+  const [angles, setAngles] = useState([45,45,45]);
+
+  const GATES = {
+    "X (CNOT)": [[0,1],[1,0]],
+    "Z (CZ)": [[1,0],[0,-1]],
+    "Y": [[0,{r:0,i:-1}],[{r:0,i:1},0]],
+    "H": [[1/Math.sqrt(2),1/Math.sqrt(2)],[1/Math.sqrt(2),-1/Math.sqrt(2)]],
+    "Ry(π/4)": [[Math.cos(Math.PI/8),-Math.sin(Math.PI/8)],[Math.sin(Math.PI/8),Math.cos(Math.PI/8)]],
+    "Ry(π/2)": [[Math.cos(Math.PI/4),-Math.sin(Math.PI/4)],[Math.sin(Math.PI/4),Math.cos(Math.PI/4)]],
+    "S": [[1,0],[0,{r:0,i:1}]],
+    "T": [[1,0],[0,{r:Math.cos(Math.PI/4),i:Math.sin(Math.PI/4)}]],
+  };
+
+  const cx = (v) => typeof v === 'number' ? {r:v,i:0} : v;
+  const cmul = (a,b) => ({r:a.r*b.r-a.i*b.i, i:a.r*b.i+a.i*b.r});
+  const cadd = (a,b) => ({r:a.r+b.r, i:a.i+b.i});
+  const cconj = (a) => ({r:a.r, i:-a.i});
+  const cabs2 = (a) => a.r*a.r+a.i*a.i;
+  const cscale = (s,a) => ({r:s*a.r, i:s*a.i});
+
+  const getU = () => {
+    const raw = GATES[gateKey];
+    return raw.map(row => row.map(cx));
+  };
+
+  const computeZ = () => {
+    const U = getU();
+    const [a,b,c,d] = [U[0][0],U[0][1],U[1][0],U[1][1]];
+    const bRad = beta*Math.PI/180;
+    const cb=Math.cos(bRad), sb=Math.sin(bRad);
+    const xi = cadd(cadd(cscale(cb*cb,a), cscale(cb*sb,cadd(b,c))), cscale(sb*sb,d));
+    let state = [{r:1,i:0}, xi, cconj(xi), {r:1,i:0}];
+
+    const relayAngles = uniform ? Array(nRelays).fill(uniformAlpha) : angles.slice(0,nRelays);
+    for(let k=nRelays-1; k>=1; k--) {
+      const aRad = relayAngles[k]*Math.PI/180;
+      const ca=Math.cos(aRad), sa=Math.sin(aRad);
+      const r0 = cadd(cscale(ca,a), cscale(sa,b));
+      const r1 = cadd(cscale(ca,c), cscale(sa,d));
+      const newA = cadd(cscale(ca*ca,state[0]), cscale(sa*sa,state[1]));
+      const newB = cadd(cmul({r:ca,i:0},cmul(r0,state[0])), cmul({r:sa,i:0},cmul(r1,state[1])));
+      const newC = cadd(cmul({r:ca,i:0},cmul(cconj(r0),state[2])), cmul({r:sa,i:0},cmul(cconj(r1),state[3])));
+      const newD = cadd(cscale(cabs2(r0),state[2]), cscale(cabs2(r1),state[3]));
+      state = [newA, newB, newC, newD];
+    }
+    const a1Rad = relayAngles[0]*Math.PI/180;
+    const ca1=Math.cos(a1Rad), sa1=Math.sin(a1Rad);
+    const r0_1 = cadd(cscale(ca1,a), cscale(sa1,b));
+    const r1_1 = cadd(cscale(ca1,c), cscale(sa1,d));
+    const Z = cscale(0.5, cadd(cadd(cscale(ca1*ca1,state[0]), cscale(sa1*sa1,state[1])),
+                                cadd(cscale(cabs2(r0_1),state[2]), cscale(cabs2(r1_1),state[3]))));
+    return Z;
+  };
+
+  const computeSweep = () => {
+    const pts = [];
+    for(let deg=0; deg<=90; deg+=1) {
+      const U = getU();
+      const [a,b,c,d] = [U[0][0],U[0][1],U[1][0],U[1][1]];
+      const bRad = beta*Math.PI/180;
+      const cb=Math.cos(bRad), sb=Math.sin(bRad);
+      const xi = cadd(cadd(cscale(cb*cb,a), cscale(cb*sb,cadd(b,c))), cscale(sb*sb,d));
+      let state = [{r:1,i:0}, xi, cconj(xi), {r:1,i:0}];
+      const aRad = deg*Math.PI/180;
+      for(let k=nRelays-1; k>=1; k--) {
+        const ca=Math.cos(aRad), sa=Math.sin(aRad);
+        const r0 = cadd(cscale(ca,a), cscale(sa,b));
+        const r1 = cadd(cscale(ca,c), cscale(sa,d));
+        const nA = cadd(cscale(ca*ca,state[0]), cscale(sa*sa,state[1]));
+        const nB = cadd(cmul({r:ca,i:0},cmul(r0,state[0])), cmul({r:sa,i:0},cmul(r1,state[1])));
+        const nC = cadd(cmul({r:ca,i:0},cmul(cconj(r0),state[2])), cmul({r:sa,i:0},cmul(cconj(r1),state[3])));
+        const nD = cadd(cscale(cabs2(r0),state[2]), cscale(cabs2(r1),state[3]));
+        state = [nA, nB, nC, nD];
+      }
+      const ca1=Math.cos(aRad), sa1=Math.sin(aRad);
+      const r0_1 = cadd(cscale(ca1,a), cscale(sa1,b));
+      const r1_1 = cadd(cscale(ca1,c), cscale(sa1,d));
+      const Z = cscale(0.5, cadd(cadd(cscale(ca1*ca1,state[0]), cscale(sa1*sa1,state[1])),
+                                  cadd(cscale(cabs2(r0_1),state[2]), cscale(cabs2(r1_1),state[3]))));
+      pts.push({deg, re:Z.r, im:Z.i, f:Z.r*Z.r+Z.i*Z.i});
+    }
+    return pts;
+  };
+
+  const Z = computeZ();
+  const sc = Z.r;
+  const F = Z.r*Z.r + Z.i*Z.i;
+  const sweep = useMemo(computeSweep, [gateKey, nRelays, beta]);
+
+  const W=500, H=250, pad=40;
+  const xScale = (deg) => pad + (deg/90)*(W-2*pad);
+  const yScale = (v) => pad + (1-v)*(H-2*pad);
+
+  useEffect(() => {
+    if(!uniform) {
+      const a = Array(nRelays).fill(uniformAlpha);
+      setAngles(a);
+    }
+  }, [nRelays]);
+
+  return (
+    <div style={{padding:16,maxWidth:900}}>
+      <div style={{fontSize:15,fontWeight:700,color:C.accent,marginBottom:12}}>General C-U Relay Calculator</div>
+      <div style={{fontSize:11,color:C.txm,marginBottom:16}}>Theorem 16: Universal 4×4 Transfer Matrix — works for ANY controlled-unitary gate</div>
+
+      <div style={{display:"flex",gap:20,flexWrap:"wrap",marginBottom:16}}>
+        <div>
+          <div style={{fontSize:10,color:C.txd,marginBottom:4}}>GATE U</div>
+          <select value={gateKey} onChange={e=>setGateKey(e.target.value)} style={{background:C.sf,color:C.tx,border:`1px solid ${C.bd}`,borderRadius:4,padding:"4px 8px",fontSize:12,fontFamily:font}}>
+            {Object.keys(GATES).map(k => <option key={k} value={k}>C-{k}</option>)}
+          </select>
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.txd,marginBottom:4}}>RELAYS N={nRelays}</div>
+          <input type="range" min={1} max={20} value={nRelays} onChange={e=>setNRelays(+e.target.value)} style={{width:120}} />
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.txd,marginBottom:4}}>RELAY α={uniformAlpha}°</div>
+          <input type="range" min={0} max={90} value={uniformAlpha} onChange={e=>setUniformAlpha(+e.target.value)} style={{width:120}} />
+        </div>
+        <div>
+          <div style={{fontSize:10,color:C.txd,marginBottom:4}}>ENDPOINT β={beta}°</div>
+          <input type="range" min={0} max={90} value={beta} onChange={e=>setBeta(+e.target.value)} style={{width:120}} />
+        </div>
+      </div>
+
+      <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:16}}>
+        <div style={{padding:12,borderRadius:8,background:C.sf,border:`1px solid ${C.bd}`,minWidth:140}}>
+          <div style={{fontSize:10,color:C.txd}}>⟨S|C⟩ = Re(Z)</div>
+          <div style={{fontSize:22,fontWeight:700,color:sc>0.9?C.safe:sc>0.5?C.warn:C.danger}}>{sc.toFixed(6)}</div>
+        </div>
+        <div style={{padding:12,borderRadius:8,background:C.sf,border:`1px solid ${C.bd}`,minWidth:140}}>
+          <div style={{fontSize:10,color:C.txd}}>F = |Z|²</div>
+          <div style={{fontSize:22,fontWeight:700,color:F>0.9?C.safe:F>0.5?C.warn:C.danger}}>{F.toFixed(6)}</div>
+        </div>
+        {Math.abs(Z.i) > 1e-6 && (
+          <div style={{padding:12,borderRadius:8,background:C.sf,border:`1px solid ${C.bd}`,minWidth:140}}>
+            <div style={{fontSize:10,color:C.txd}}>Im(Z)</div>
+            <div style={{fontSize:22,fontWeight:700,color:C.txm}}>{Z.i.toFixed(6)}</div>
+          </div>
+        )}
+      </div>
+
+      <div style={{marginBottom:16}}>
+        <div style={{fontSize:10,color:C.txd,marginBottom:4}}>F(α) SWEEP — uniform chain, N={nRelays}, β={beta}°</div>
+        <svg width={W} height={H} style={{background:C.sf,borderRadius:8,border:`1px solid ${C.bd}`}}>
+          <line x1={pad} y1={yScale(0)} x2={W-pad} y2={yScale(0)} stroke={C.bd} strokeWidth={0.5}/>
+          <line x1={pad} y1={yScale(0.5)} x2={W-pad} y2={yScale(0.5)} stroke={C.bd} strokeWidth={0.5} strokeDasharray="4,4"/>
+          <line x1={pad} y1={yScale(1)} x2={W-pad} y2={yScale(1)} stroke={C.bd} strokeWidth={0.5}/>
+          {[0,15,30,45,60,75,90].map(d => <text key={d} x={xScale(d)} y={H-4} textAnchor="middle" fill={C.txd} fontSize="8" fontFamily={font}>{d}°</text>)}
+          {[0,0.25,0.5,0.75,1].map(v => <text key={v} x={pad-4} y={yScale(v)+3} textAnchor="end" fill={C.txd} fontSize="8" fontFamily={font}>{v}</text>)}
+          <path d={sweep.map((p,i)=>`${i===0?'M':'L'}${xScale(p.deg)},${yScale(Math.max(-0.1,Math.min(1.1,p.re)))}`).join(' ')} fill="none" stroke={C.accent} strokeWidth={2}/>
+          {Math.abs(sweep[45]?.im||0) > 0.01 && (
+            <path d={sweep.map((p,i)=>`${i===0?'M':'L'}${xScale(p.deg)},${yScale(Math.max(-0.1,Math.min(1.1,p.f)))}`).join(' ')} fill="none" stroke={C.safe} strokeWidth={1.5} strokeDasharray="4,2"/>
+          )}
+          <circle cx={xScale(uniformAlpha)} cy={yScale(Math.max(-0.1,Math.min(1.1,sc)))} r={5} fill={C.accent} stroke={C.bg} strokeWidth={2}/>
+          <text x={W/2} y={H-18} textAnchor="middle" fill={C.txd} fontSize="9" fontFamily={font}>uniform relay angle α</text>
+          <text x={pad+4} y={pad-8} fill={C.accent} fontSize="9" fontFamily={font}>Re(Z)</text>
+          {Math.abs(sweep[45]?.im||0) > 0.01 && <text x={pad+50} y={pad-8} fill={C.safe} fontSize="9" fontFamily={font}>|Z|²</text>}
+        </svg>
+      </div>
+
+      <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+        <div style={{padding:12,borderRadius:8,background:"linear-gradient(135deg,rgba(129,140,248,0.06),rgba(16,185,129,0.06))",border:`1px solid ${C.bd}`,flex:1,minWidth:280}}>
+          <div style={{fontSize:10,fontWeight:600,color:C.accent,marginBottom:6}}>TRANSFER MATRIX M(α)</div>
+          <div style={{fontSize:10,color:C.txm,lineHeight:1.8,fontFamily:font}}>
+            <div>⎡ cos²α    sin²α    0        0     ⎤</div>
+            <div>⎢ cα·r₀    sα·r₁    0        0     ⎥</div>
+            <div>⎢ 0        0        cα·r₀*   sα·r₁*⎥</div>
+            <div>⎣ 0        0        |r₀|²    |r₁|² ⎦</div>
+          </div>
+          <div style={{fontSize:9,color:C.txd,marginTop:6}}>r₀ = a·cosα + b·sinα, r₁ = c·cosα + d·sinα</div>
+          <div style={{fontSize:9,color:C.txd}}>Upper: hub=0 (U forward). Lower: hub=1 (U† backward).</div>
+        </div>
+        <div style={{padding:12,borderRadius:8,background:C.sf,border:`1px solid ${C.bd}`,flex:1,minWidth:200}}>
+          <div style={{fontSize:10,fontWeight:600,color:C.accent,marginBottom:6}}>GATE PROPERTIES</div>
+          {(() => {
+            const U = getU();
+            const xi0 = (() => { const cb=Math.cos(beta*Math.PI/180),sb=Math.sin(beta*Math.PI/180); const [a,b,c,d]=U.flat(); return cadd(cadd(cscale(cb*cb,a),cscale(cb*sb,cadd(b,c))),cscale(sb*sb,d)); })();
+            const blocksIdentical = U.flat().every(v => Math.abs(v.i) < 1e-10);
+            return (
+              <div style={{fontSize:10,color:C.txm,lineHeight:1.8}}>
+                <div>ξ(β) = {xi0.r.toFixed(4)}{Math.abs(xi0.i)>1e-4 ? ` + ${xi0.i.toFixed(4)}i` : ""}</div>
+                <div>Blocks identical: {blocksIdentical ? "✓ (real U → D_eff=2)" : "✗ (complex U → D_eff=4)"}</div>
+                <div>Bond dimension: D=4 (universal, constant)</div>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -546,6 +753,7 @@ export default function Nativ3IDE() {
         <Tab active={tab==="scanner"} onClick={()=>setTab("scanner")}>Circuit Scanner</Tab>
         <Tab active={tab==="benchmarks"} onClick={()=>setTab("benchmarks")}>Algorithm Benchmarks</Tab>
         <Tab active={tab==="nrelay"} onClick={()=>setTab("nrelay")}>N-Relay Calculator</Tab>
+        <Tab active={tab==="general"} onClick={()=>setTab("general")}>General C-U</Tab>
       </div>
 
       {/* ─── Scanner Tab ─── */}
@@ -715,10 +923,13 @@ export default function Nativ3IDE() {
       {/* ─── N-Relay Calculator Tab ─── */}
       {tab === "nrelay" && <NRelayCalculator />}
 
+      {/* ─── General C-U Tab ─── */}
+      {tab === "general" && <GeneralCUCalculator />}
+
       {/* ─── Footer ─── */}
       <div style={{borderTop:`1px solid ${C.bd}`,padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
         <div style={{fontSize:9,color:C.txd}}>
-          Twelve Theorems · Non-transitivity · General fidelity · CZ duality · Fault isolation · Container survival · Builder memory · Double relay · N-relay recursion · Convergence · Transfer matrix · Projector · Disorder decay
+          Sixteen Theorems · Non-transitivity · General fidelity · CZ duality · Fault isolation · Container · Builder memory · N-relay · Transfer matrix · Projector · Disorder decay · CZ polynomial · Universal linearity · General formula · Universal 4×4 transfer matrix
         </div>
         <div style={{fontSize:9,color:C.txd}}>
           DOI: 10.5281/zenodo.19210676
