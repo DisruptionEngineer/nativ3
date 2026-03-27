@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 
 function parseQASM(qasm) {
   const gates = []; let nQubits = 0, t = 0; const shifts = new Set();
