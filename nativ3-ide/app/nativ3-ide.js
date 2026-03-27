@@ -190,11 +190,14 @@ function analyzeBenchmark(b) {
 // ─── Presets ──────────────────────────────────────────────────
 
 const PRESETS = {
+  "Steane Code":    "7→0\n7→2\n7→4\n7→6\n8→1\n8→2\n8→5\n8→6\n9→3\n9→4\n9→5\n9→6\n0→10\n2→10\n4→10\n6→10\n1→11\n2→11\n5→11\n6→11\n3→12\n4→12\n5→12\n6→12",
+  "Surface Code":   "9→0\n9→1\n9→3\n9→4\n10→1\n10→2\n10→4\n10→5\n11→3\n11→4\n11→6\n11→7\n12→4\n12→5\n12→7\n12→8\n0→13\n1→13\n3→13\n4→13\n1→14\n2→14\n4→14\n5→14\n3→15\n4→15\n6→15\n7→15\n4→16\n5→16\n7→16\n8→16",
+  "QFT-5":          "h 0\n0→1\n0→2\n0→3\n0→4\n1→2\n1→3\n1→4\n2→3\n2→4\n3→4",
+  "Trotter-8":      "0→1\n2→3\n4→5\n6→7\n1→2\n3→4\n5→6\n0→1\n2→3\n4→5\n6→7\n1→2\n3→4\n5→6",
+  "Grover-4":       "0→3\n1→3\n2→3\n0→1\n1→2\n2→3\n0→3\n1→3\n2→3\n0→1\n1→2\n2→3",
   "Star":           "h 0\n0→1\n0→2\n0→3",
   "Chain":          "h 0\n0→1\n1→2\n2→3",
   "Dual Hub":       "h 0\nh 4\n0→1\n0→2\n0→3\n4→1\n4→2\n4→3",
-  "IBM GHZ":        "h 2\n2→1\n2→3\n1→0\n3→4",
-  "Star GHZ":       "h 2\n2→0\n2→1\n2→3\n2→4",
   "Konami":         "h 0\nh 1\n0→2\n0→3\n1→2\n1→3\n0→4\n1→5",
   "Syndrome":       "0→4\n1→4\n2→5\n3→5\n4→6\n5→6",
   "QASM":           'OPENQASM 2.0;\ninclude "qelib1.inc";\nqreg q[5];\nh q[0];\ncx q[0], q[1];\ncx q[1], q[2];\ncx q[0], q[3];\ncx q[3], q[4];',
@@ -213,13 +216,15 @@ const NC = {hub:C.hub,spoke:C.spoke,relay:C.relay,virgin:C.virgin};
 // ─── Graph Component ──────────────────────────────────────────
 
 function Graph({gates,analysis,nQubits,chains}) {
-  const W=520,H=340,cx=W/2,cy=H/2,r=Math.min(W,H)*0.33;
+  const large = nQubits > 10;
+  const W=large?700:520,H=large?500:340,cx=W/2,cy=H/2,r=Math.min(W,H)*0.38;
+  const nr=large?14:18,glowR=large?22:30,fs=large?9:11,fsL=large?8:9,offN=large?18:22,offT=large?24:32,offR=large?20:26;
   const pos = useMemo(()=>{
     const p=[]; for(let i=0;i<nQubits;i++){
       const a=-Math.PI/2+(2*Math.PI*i)/nQubits;
       p.push({x:cx+r*Math.cos(a),y:cy+r*Math.sin(a)});
     } return p;
-  },[nQubits]);
+  },[nQubits,cx,cy,r]);
   const chainEdges = useMemo(()=>{
     const s=new Set(); (chains||[]).forEach(ch=>{for(let i=0;i<ch.length-1;i++)s.add(`${ch[i]}-${ch[i+1]}`);}); return s;
   },[chains]);
@@ -237,7 +242,7 @@ function Graph({gates,analysis,nQubits,chains}) {
         const nx=dx/len,ny=dy/len;
         const isChain=chainEdges.has(`${g.ctrl}-${g.targ}`);
         const isDanger=analysis.nodes[g.ctrl]?.type==="relay"||analysis.nodes[g.targ]?.type==="relay";
-        return <line key={i} x1={p1.x+nx*22} y1={p1.y+ny*22} x2={p2.x-nx*22} y2={p2.y-ny*22}
+        return <line key={i} x1={p1.x+nx*offN} y1={p1.y+ny*offN} x2={p2.x-nx*offN} y2={p2.y-ny*offN}
           stroke={isChain?C.danger:isDanger?"rgba(239,68,68,0.5)":C.link}
           strokeWidth={isChain?3:isDanger?2:1.8} opacity={isChain?1:isDanger?0.7:0.5}
           markerEnd={isChain||isDanger?"url(#a2)":"url(#a1)"} strokeDasharray={isDanger&&!isChain?"6 3":"none"}/>;
@@ -245,11 +250,11 @@ function Graph({gates,analysis,nQubits,chains}) {
       {analysis.nodes.map((n,i)=>{
         const p=pos[i]; if(!p)return null; const color=NC[n.type]||C.virgin;
         return(<g key={i}>
-          <circle cx={p.x} cy={p.y} r={30} fill={`url(#g${n.type})`}/>
-          <circle cx={p.x} cy={p.y} r={18} fill={C.sf} stroke={color} strokeWidth={2.5} style={{filter:n.type==="relay"?"drop-shadow(0 0 8px rgba(239,68,68,0.7))":"none"}}/>
-          <text x={p.x} y={p.y+1} textAnchor="middle" dominantBaseline="central" fill={color} fontSize="11" fontWeight="700" fontFamily="'JetBrains Mono',monospace">q{i}</text>
-          <text x={p.x} y={p.y+32} textAnchor="middle" fill={C.txm} fontSize="9" fontFamily="'JetBrains Mono',monospace">{n.type}</text>
-          {n.relay===1&&<text x={p.x} y={p.y-26} textAnchor="middle" fill={C.danger} fontSize="10" fontWeight="700">r=1</text>}
+          <circle cx={p.x} cy={p.y} r={glowR} fill={`url(#g${n.type})`}/>
+          <circle cx={p.x} cy={p.y} r={nr} fill={C.sf} stroke={color} strokeWidth={2.5} style={{filter:n.type==="relay"?"drop-shadow(0 0 8px rgba(239,68,68,0.7))":"none"}}/>
+          <text x={p.x} y={p.y+1} textAnchor="middle" dominantBaseline="central" fill={color} fontSize={fs} fontWeight="700" fontFamily="'JetBrains Mono',monospace">q{i}</text>
+          <text x={p.x} y={p.y+offT} textAnchor="middle" fill={C.txm} fontSize={fsL} fontFamily="'JetBrains Mono',monospace">{n.type}</text>
+          {n.relay===1&&<text x={p.x} y={p.y-offR} textAnchor="middle" fill={C.danger} fontSize="10" fontWeight="700">r=1</text>}
         </g>);
       })}
     </svg>
@@ -697,8 +702,8 @@ function GeneralCUCalculator() {
 // ─── Main IDE ─────────────────────────────────────────────────
 
 export default function Nativ3IDE() {
-  const [input, setInput] = useState(PRESETS["IBM GHZ"]);
-  const [activePreset, setActivePreset] = useState("IBM GHZ");
+  const [input, setInput] = useState(PRESETS["Steane Code"]);
+  const [activePreset, setActivePreset] = useState("Steane Code");
   const [tab, setTab] = useState("scanner"); // scanner | benchmarks
 
   const parsed = useMemo(()=> input.includes("OPENQASM")||input.includes("qreg") ? parseQASM(input) : parseGateList(input), [input]);
