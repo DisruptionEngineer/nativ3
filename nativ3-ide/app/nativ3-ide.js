@@ -739,7 +739,7 @@ export default function Nativ3IDE() {
           )}
           <a href="https://pypi.org/project/nativ3/" target="_blank" rel="noopener" style={{fontSize:9,color:C.accent,textDecoration:"none",padding:"3px 8px",border:`1px solid rgba(129,140,248,0.3)`,borderRadius:4,background:"rgba(129,140,248,0.08)"}}>PyPI</a>
           <a href="https://github.com/DisruptionEngineer/nativ3" target="_blank" rel="noopener" style={{fontSize:9,color:C.txm,textDecoration:"none",padding:"3px 8px",border:`1px solid ${C.bd}`,borderRadius:4}}>GitHub</a>
-          <a href="https://doi.org/10.5281/zenodo.19210676" target="_blank" rel="noopener" style={{fontSize:9,color:C.txm,textDecoration:"none",padding:"3px 8px",border:`1px solid ${C.bd}`,borderRadius:4}}>Paper</a>
+          <a href="https://doi.org/10.5281/zenodo.19319040" target="_blank" rel="noopener" style={{fontSize:9,color:C.txm,textDecoration:"none",padding:"3px 8px",border:`1px solid ${C.bd}`,borderRadius:4}}>Paper</a>
         </div>
       </div>
 
@@ -934,10 +934,10 @@ export default function Nativ3IDE() {
       {/* ─── Footer ─── */}
       <div style={{borderTop:`1px solid ${C.bd}`,padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
         <div style={{fontSize:9,color:C.txd}}>
-          Sixteen Theorems · Non-transitivity · General fidelity · CZ duality · Fault isolation · Container · Builder memory · N-relay · Transfer matrix · Projector · Disorder decay · CZ polynomial · Universal linearity · General formula · Universal 4×4 transfer matrix
+          Twenty-Four Theorems · Non-transitivity · General fidelity · CZ duality · Fault isolation · Container · Builder memory · N-relay · Transfer matrix · Projector · Disorder decay · CZ polynomial · Universal linearity · General formula · Universal 4×4 transfer matrix
         </div>
         <div style={{fontSize:9,color:C.txd}}>
-          DOI: 10.5281/zenodo.19210676
+          DOI: 10.5281/zenodo.19319040
         </div>
       </div>
     </div>
