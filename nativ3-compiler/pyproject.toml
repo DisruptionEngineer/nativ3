@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nativ3"
-version = "0.1.0"
+version = "0.2.0"
 description = "Topology-aware quantum circuit compiler with relay-bit fault isolation"
 readme = "README.md"
 license = "MIT"
