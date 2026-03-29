@@ -1,0 +1,24 @@
+{
+  "job_id": "d74jgl0qhmps73b46jo0",
+  "backend": "ibm_kingston",
+  "n_circuits": 26,
+  "shots": 8192,
+  "alphas_deg": [
+    0.0,
+    14.999999999999998,
+    22.5,
+    29.999999999999996,
+    45.0,
+    59.99999999999999,
+    75.00000000000001,
+    90.0,
+    11.25,
+    33.75,
+    56.25,
+    78.75,
+    67.5
+  ],
+  "layout": "consecutive pairs [star_\u03b1, chain_\u03b1]",
+  "mitigation": "SamplerV2 default (readout error correction)",
+  "submitted": "2026-03-29"
+}
